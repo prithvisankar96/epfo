@@ -72,6 +72,12 @@ test.describe('happy path (UAN …00)', () => {
     await expect(page.getByTestId('employer-share')).toBeVisible();
     await expect(page.getByTestId('pension-share')).toBeVisible();
     await expect(page.getByTestId('contribution-chart')).toBeVisible();
+    // The chart must actually draw marks: 12 months × 2 stacked series.
+    await expect(
+      page.locator(
+        '[data-testid="contribution-chart"] .recharts-bar-rectangle path'
+      )
+    ).toHaveCount(24);
     await expect(page.getByTestId('contribution-table')).toBeVisible();
 
     // Two accounts → account switcher tabs
