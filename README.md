@@ -55,27 +55,49 @@ All EPFO data access goes through the `PFProvider` interface
 (`lib/providers/types.ts`) and is resolved by a single factory
 (`lib/providers/index.ts`). Product code never imports a concrete provider.
 
-To switch from mock to the real aggregator:
+To switch from mock to the real aggregator (Surepass):
+
+1. Get a Surepass account (https://surepass.io → Request Access) and create
+   a bearer JWT in the console (https://console.surepass.io). Ask for the
+   **EPFO Passbook** product to be enabled — access is gated per product,
+   and it's credit-metered per API hit.
+2. Set the env vars (locally in `.env`, or Project → Settings → Environment
+   Variables on Vercel):
 
 ```bash
 PF_PROVIDER=aggregator
-PF_PROVIDER_BASE_URL=https://<vendor-sandbox>/api/v1
-PF_PROVIDER_API_KEY=<key>
+PF_PROVIDER_BASE_URL=https://sandbox.surepass.io/api/v1   # sandbox
+# PF_PROVIDER_BASE_URL=https://kyc-api.surepass.app/api/v1 # production
+PF_PROVIDER_API_KEY=<bearer JWT from the console>
 ```
 
-That's it — zero code changes. The aggregator adapter
-(`lib/providers/aggregator.ts`) wraps every call with a 15s timeout, one retry
-on 5xx (never for OTP submission), maps vendor errors into the shared
+3. Verify with `GET /api/health` — it reports the active provider, whether
+   credentials are present, and API-host reachability.
+
+That's it — zero code changes. The adapter implements Surepass's three-step
+EPFO passbook flow (`generate-otp` → `submit-otp` → `get-passbook`) and
+wraps every call with a 15s timeout, one retry on 5xx (never for OTP
+submission), maps vendor `message_code`s and message text into the shared
 `PFErrorCode` taxonomy (mapping table documented in the file), normalizes
-amounts to integer INR and months to `YYYY-MM`, and logs only request metadata
-— never UAN, mobile, OTP, or response bodies.
+amounts to integer INR and months to `YYYY-MM`, and logs only request
+metadata — never UAN, mobile, OTP, or response bodies.
+
+Two Surepass behaviours worth knowing:
+
+* **The OTP always goes to the UAN-registered mobile** — the vendor takes
+  only the UAN. The adapter compares the vendor's masked registered number
+  against the user-entered mobile and fails fast with `MOBILE_MISMATCH`
+  when the visible tail differs.
+* **The basic passbook payload may omit `pension_share`** on some rows; the
+  adapter treats missing pension amounts as 0. If EPS accuracy matters,
+  evaluate Surepass's "EPFO Passbook Advanced" endpoints.
 
 ### `[OPEN]` decisions made in this build
 
-* **Aggregator vendor: Surepass-shaped adapter.** The adapter follows
-  Surepass's two-step EPFO passbook flow (`generate-otp` / `submit-otp`).
-  Before go-live, verify field names against the vendor's current sandbox —
-  only `lib/providers/aggregator.ts` should need touching.
+* **Aggregator vendor: Surepass.** The adapter targets Surepass's documented
+  EPFO Passbook API (request/response shapes verified against their public
+  API docs; unit tests replay the documented payloads). Only
+  `lib/providers/aggregator.ts` should need touching if the vendor changes.
 * **Consent log: local JSONL file** (`data/consent-log.jsonl`), append-only.
   Simplest for v1. On Vercel the deployment filesystem is read-only, so the
   default automatically falls back to `/tmp/pf-pulse-consent-log.jsonl` —

@@ -1,5 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AggregatorProvider,
   mapVendorError,
   normalizeAmount,
   normalizeMonth,
@@ -152,9 +153,181 @@ describe('aggregator error mapping', () => {
     [503, '', 'EPFO_UNAVAILABLE'],
     [500, 'internal server error', 'PROVIDER_UNAVAILABLE'],
     [400, 'weird new failure', 'UNKNOWN'],
-  ] as const)('%s "%s" → %s', (status, message, code) => {
+  ] as const)('message text: %s "%s" → %s', (status, message, code) => {
     const err = mapVendorError(status, message);
     expect(err).toBeInstanceOf(PFError);
     expect(err.code).toBe(code);
+  });
+
+  it.each([
+    ['invalid_otp', 'OTP_INVALID'],
+    ['otp_expired', 'OTP_EXPIRED'],
+    ['invalid_client_id', 'OTP_EXPIRED'],
+    ['record_not_found', 'INVALID_UAN'],
+    ['invalid_input', 'INVALID_UAN'],
+    ['source_down', 'EPFO_UNAVAILABLE'],
+    ['insufficient_credits', 'PROVIDER_UNAVAILABLE'],
+    ['unauthorized', 'PROVIDER_UNAVAILABLE'],
+  ] as const)('message_code %s → %s', (messageCode, code) => {
+    // message_code wins even when the human text is unhelpful
+    expect(mapVendorError(400, 'Bad Request', messageCode).code).toBe(code);
+  });
+});
+
+describe('AggregatorProvider against documented Surepass payloads', () => {
+  const provider = new AggregatorProvider();
+
+  beforeEach(() => {
+    process.env.PF_PROVIDER_BASE_URL = 'https://sandbox.surepass.io/api/v1';
+    process.env.PF_PROVIDER_API_KEY = 'test-token';
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubFetch(routes: Record<string, { status: number; json: any }>) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const route = Object.keys(routes).find((p) => String(url).endsWith(p));
+        if (!route) throw new Error(`unexpected fetch: ${url}`);
+        const { status, json } = routes[route];
+        return new Response(JSON.stringify(json), { status });
+      })
+    );
+  }
+
+  it('initiateFetch maps the generate-otp response', async () => {
+    stubFetch({
+      '/income/epfo/passbook/generate-otp': {
+        status: 200,
+        json: {
+          data: {
+            client_id: 'income_epfo_passbook_abc',
+            otp_sent: true,
+            masked_mobile_number: 'XXXXXX3210',
+          },
+          status_code: 200,
+          message_code: 'success',
+          success: true,
+        },
+      },
+    });
+    const res = await provider.initiateFetch({
+      uan: '101550652226',
+      mobile: '9876543210',
+      consentId: 'c1',
+    });
+    expect(res.transactionId).toBe('income_epfo_passbook_abc');
+    expect(res.otpSentTo).toBe('+91 XXXXXX3210');
+  });
+
+  it('initiateFetch throws MOBILE_MISMATCH when the registered tail differs', async () => {
+    stubFetch({
+      '/income/epfo/passbook/generate-otp': {
+        status: 200,
+        json: {
+          data: {
+            client_id: 'income_epfo_passbook_abc',
+            otp_sent: true,
+            masked_mobile_number: 'XXXXXX5699',
+          },
+          success: true,
+        },
+      },
+    });
+    await expect(
+      provider.initiateFetch({
+        uan: '101550652226',
+        mobile: '9876543210',
+        consentId: 'c1',
+      })
+    ).rejects.toMatchObject({ code: 'MOBILE_MISMATCH' });
+  });
+
+  it('completeFetch validates OTP, fetches and normalizes the passbook', async () => {
+    stubFetch({
+      '/income/epfo/passbook/submit-otp': {
+        status: 200,
+        json: { data: { otp_validated: true }, success: true },
+      },
+      '/income/epfo/passbook/get-passbook': {
+        status: 200,
+        json: {
+          data: {
+            client_id: 'income_epfo_passbook_abc',
+            pf_uan: '101550652226',
+            full_name: 'JOHN DOE',
+            companies: {
+              RJRAJ00161550000031234: {
+                company_name: 'M/S ABC BANK LIMITED',
+                establishment_id: 'RJRAJ0016112345',
+                passbook: [
+                  {
+                    member_id: 'RJRAJ00161550000031234',
+                    year: '2020',
+                    month: '01',
+                    employee_share: '770',
+                    employer_share: '235',
+                    approved_on: '2020-01-14',
+                  },
+                  {
+                    member_id: 'RJRAJ00161550000031234',
+                    year: '2020',
+                    month: '02',
+                    employee_share: '800',
+                    employer_share: '244',
+                    pension_share: '556',
+                    approved_on: '2020-02-14',
+                  },
+                ],
+              },
+            },
+          },
+          success: true,
+        },
+      },
+    });
+    const data = await provider.completeFetch({
+      transactionId: 'income_epfo_passbook_abc',
+      otp: '582430',
+    });
+    expect(data.uan).toBe('101550652226');
+    expect(data.memberName).toBe('JOHN DOE');
+    expect(data.accounts).toHaveLength(1);
+    const acc = data.accounts[0];
+    expect(acc.establishmentName).toBe('M/S ABC BANK LIMITED');
+    expect(acc.memberId).toBe('RJRAJ00161550000031234');
+    // most recent first, YYYY-MM normalized
+    expect(acc.contributions.map((c) => c.month)).toEqual([
+      '2020-02',
+      '2020-01',
+    ]);
+    expect(acc.balance).toEqual({
+      employeeShare: 1570,
+      employerShare: 479,
+      pensionShare: 556,
+      total: 2605,
+    });
+    // dormant account (last contribution 2020) → inactive
+    expect(acc.isActive).toBe(false);
+  });
+
+  it('completeFetch maps an invalid OTP without calling get-passbook', async () => {
+    stubFetch({
+      '/income/epfo/passbook/submit-otp': {
+        status: 400,
+        json: {
+          data: { otp_validated: false },
+          status_code: 400,
+          message_code: 'invalid_otp',
+          message: 'The OTP provided is invalid or has expired',
+          success: false,
+        },
+      },
+    });
+    await expect(
+      provider.completeFetch({ transactionId: 'abc', otp: '000001' })
+    ).rejects.toMatchObject({ code: 'OTP_INVALID' });
   });
 });

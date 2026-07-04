@@ -10,15 +10,28 @@ import type {
   ProviderHealth,
 } from './types';
 
-// AggregatorProvider — real EPFO passbook fetch via a verification-API
-// aggregator. [OPEN → chosen: Surepass] Surepass was picked for its
-// documented two-step EPFO passbook flow (generate-otp / submit-otp) and
-// public sandbox. The request/response shapes below follow Surepass's
-// EPF passbook API; if the vendor changes, only this file changes.
+// AggregatorProvider — real EPFO passbook fetch via Surepass.
+//
+// Surepass's EPFO passbook flow is three calls (docs: share.apidog.com
+// docs-site 750756, "EPFO Passbook"):
+//
+//   1. POST /income/epfo/passbook/generate-otp   { id_number: <UAN> }
+//        → { data: { client_id, otp_sent, masked_mobile_number } }
+//      The OTP always goes to the UAN-registered mobile — the vendor does
+//      not take a mobile number. We compare the returned masked number
+//      against the user-entered one to surface MOBILE_MISMATCH early.
+//   2. POST /income/epfo/passbook/submit-otp     { client_id, otp }
+//        → { data: { otp_validated } }
+//   3. POST /income/epfo/passbook/get-passbook   { client_id }
+//        → { data: { pf_uan, full_name, companies: { [memberId]:
+//             { company_name, establishment_id, passbook: [
+//               { year, month, employee_share, employer_share,
+//                 pension_share?, approved_on } ] } } } }
 //
 // Configuration (server-side env only — never NEXT_PUBLIC_):
-//   PF_PROVIDER_BASE_URL  e.g. https://sandbox.surepass.app/api/v1
-//   PF_PROVIDER_API_KEY   bearer token
+//   PF_PROVIDER_BASE_URL  https://kyc-api.surepass.app/api/v1  (production)
+//                         https://sandbox.surepass.io/api/v1   (sandbox)
+//   PF_PROVIDER_API_KEY   Bearer JWT from the Surepass console
 //
 // Hard rules implemented here:
 //   * 15s timeout on every call
@@ -32,25 +45,46 @@ import type {
 const TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
-// Vendor error → taxonomy mapping table
+// Vendor error → taxonomy mapping
 // ---------------------------------------------------------------------------
-// Surepass signals errors via HTTP status + a message/status_code field.
-// Matching is done on normalized message text because the vendor does not
-// publish stable machine codes for every case.
+// Surepass signals errors via HTTP status + a `message_code` (stable-ish
+// machine code) + `message` (human text). We match message_code first,
+// then fall back to message-text patterns, then to HTTP status.
 //
-//   HTTP 422 "invalid uan" / "uan not found"          → INVALID_UAN
-//   HTTP 422 "uan not activated" / "inactive"         → UAN_INACTIVE
-//   HTTP 422 "mobile not linked" / "mobile mismatch"  → MOBILE_MISMATCH
-//   HTTP 422 "invalid otp" / "incorrect otp"          → OTP_INVALID
-//   HTTP 422 "otp expired"                            → OTP_EXPIRED
-//   HTTP 422 "max attempts" / "attempts exceeded"     → OTP_MAX_ATTEMPTS
-//   HTTP 422 "exempted" / "trust"                     → EXEMPTED_TRUST
-//   HTTP 503 / "epfo" + ("down"|"unavailable"|…)      → EPFO_UNAVAILABLE
-//   HTTP 429                                          → RATE_LIMITED
-//   HTTP 5xx (other), network error, timeout          → PROVIDER_UNAVAILABLE
-//   anything else                                     → UNKNOWN
+//   message_code "invalid_otp"          → OTP_INVALID
+//   message_code "otp_expired"          → OTP_EXPIRED
+//   message_code "invalid_client_id"    → OTP_EXPIRED  (stale transaction —
+//                                          restart the flow)
+//   message_code "record_not_found"     → INVALID_UAN
+//   message_code "invalid_input"        → INVALID_UAN  (rejected id_number)
+//   message_code "source_down"          → EPFO_UNAVAILABLE
+//   message_code "insufficient_credits" → PROVIDER_UNAVAILABLE
+//   message_code "unauthorized"         → PROVIDER_UNAVAILABLE
+//   text "uan … not found/invalid"      → INVALID_UAN
+//   text "not activated/inactive"       → UAN_INACTIVE
+//   text "otp … expired"                → OTP_EXPIRED
+//   text "max/exceeded … attempts"      → OTP_MAX_ATTEMPTS
+//   text "invalid/incorrect otp"        → OTP_INVALID
+//   text "exempt/trust"                 → EXEMPTED_TRUST
+//   text "epfo … down/unavailable/…"    → EPFO_UNAVAILABLE
+//   HTTP 429                            → RATE_LIMITED
+//   HTTP 503                            → EPFO_UNAVAILABLE
+//   HTTP 5xx (other), network, timeout  → PROVIDER_UNAVAILABLE
+//   anything else                       → UNKNOWN
 // ---------------------------------------------------------------------------
-const MESSAGE_MAP: Array<[RegExp, PFErrorCode, boolean]> = [
+
+const MESSAGE_CODE_MAP: Record<string, [PFErrorCode, boolean]> = {
+  invalid_otp: ['OTP_INVALID', true],
+  otp_expired: ['OTP_EXPIRED', true],
+  invalid_client_id: ['OTP_EXPIRED', false],
+  record_not_found: ['INVALID_UAN', false],
+  invalid_input: ['INVALID_UAN', false],
+  source_down: ['EPFO_UNAVAILABLE', true],
+  insufficient_credits: ['PROVIDER_UNAVAILABLE', false],
+  unauthorized: ['PROVIDER_UNAVAILABLE', false],
+};
+
+const MESSAGE_TEXT_MAP: Array<[RegExp, PFErrorCode, boolean]> = [
   [/uan.*(not found|invalid)|invalid.*uan|no record/i, 'INVALID_UAN', false],
   [/not activated|inactive uan|uan.*inactive/i, 'UAN_INACTIVE', false],
   [/mobile.*(not linked|mismatch|not registered)/i, 'MOBILE_MISMATCH', false],
@@ -61,8 +95,16 @@ const MESSAGE_MAP: Array<[RegExp, PFErrorCode, boolean]> = [
   [/epfo.*(down|unavailable|not responding|degraded|maintenance)/i, 'EPFO_UNAVAILABLE', true],
 ];
 
-export function mapVendorError(status: number, message: string): PFError {
-  for (const [pattern, code, retryable] of MESSAGE_MAP) {
+export function mapVendorError(
+  status: number,
+  message: string,
+  messageCode?: string
+): PFError {
+  if (messageCode && MESSAGE_CODE_MAP[messageCode]) {
+    const [code, retryable] = MESSAGE_CODE_MAP[messageCode];
+    return new PFError(code, retryable);
+  }
+  for (const [pattern, code, retryable] of MESSAGE_TEXT_MAP) {
     if (pattern.test(message)) return new PFError(code, retryable);
   }
   if (status === 429) return new PFError('RATE_LIMITED', true);
@@ -105,10 +147,6 @@ export function normalizeMonth(raw: string): string {
     if (mm) return `${m[1]}-${mm}`;
   }
   return s;
-}
-
-function maskMobile(mobile: string): string {
-  return `+91 ${mobile.slice(0, 2)}XXXXXX${mobile.slice(8)}`;
 }
 
 interface VendorCallOptions {
@@ -172,15 +210,17 @@ export class AggregatorProvider implements PFProvider {
           return json;
         }
 
-        const message: string =
-          json?.message ?? json?.error ?? json?.detail ?? '';
-        const mapped = mapVendorError(res.status, String(message));
+        const message = String(json?.message ?? json?.error ?? '');
+        const messageCode =
+          typeof json?.message_code === 'string' ? json.message_code : undefined;
+        const mapped = mapVendorError(res.status, message, messageCode);
         console.warn(
           JSON.stringify({
             at: 'aggregator.call',
             path: opts.path,
             status: res.status,
             latencyMs: latency,
+            vendorCode: messageCode ?? null,
             errorCode: mapped.code,
           })
         );
@@ -213,79 +253,123 @@ export class AggregatorProvider implements PFProvider {
 
   async initiateFetch(req: InitiateRequest): Promise<InitiateResult> {
     const json = await this.call({
-      path: '/epfo/generate-otp',
-      body: { uan: req.uan, mobile: req.mobile },
+      path: '/income/epfo/passbook/generate-otp',
+      body: { id_number: req.uan },
       retryOn5xx: true,
     });
+
     const clientId: string | undefined = json?.data?.client_id;
-    if (!clientId) throw new PFError('UNKNOWN', true);
+    if (!clientId || json?.data?.otp_sent === false) {
+      throw new PFError('UNKNOWN', true);
+    }
+
+    // Surepass sends the OTP to the UAN-registered mobile regardless of
+    // what the user typed. If the registered number's visible tail doesn't
+    // match the user's input, fail fast as MOBILE_MISMATCH — otherwise
+    // they'd wait for an SMS that went to an old number.
+    const masked = String(json?.data?.masked_mobile_number ?? '');
+    const visibleTail = masked.match(/(\d{2,4})\s*$/)?.[1];
+    if (visibleTail && !req.mobile.endsWith(visibleTail)) {
+      throw new PFError('MOBILE_MISMATCH', false);
+    }
+
     return {
       transactionId: clientId,
-      otpSentTo: maskMobile(req.mobile),
+      otpSentTo: masked ? `+91 ${masked}` : `+91 XXXXXX${req.mobile.slice(8)}`,
       // Vendor does not return an expiry; EPFO OTPs are valid ~10 minutes.
       expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
     };
   }
 
   async completeFetch(req: CompleteRequest): Promise<PFAccountData> {
-    const json = await this.call({
-      path: '/epfo/submit-otp',
+    const submit = await this.call({
+      path: '/income/epfo/passbook/submit-otp',
       body: { client_id: req.transactionId, otp: req.otp },
       retryOn5xx: false, // NEVER retry OTP submission
     });
-    return this.normalize(json?.data);
+    if (submit?.data?.otp_validated === false) {
+      throw new PFError('OTP_INVALID', true);
+    }
+
+    // Passbook retrieval is an idempotent read — safe to retry.
+    const passbook = await this.call({
+      path: '/income/epfo/passbook/get-passbook',
+      body: { client_id: req.transactionId },
+      retryOn5xx: true,
+    });
+    return this.normalize(passbook?.data);
   }
 
-  /** Map the vendor passbook payload into PFAccountData. */
+  /** Map the Surepass passbook payload into PFAccountData. */
   private normalize(data: any): PFAccountData {
-    if (!data || !Array.isArray(data.companies ?? data.accounts)) {
-      throw new PFError('UNKNOWN', false);
-    }
-    const rawAccounts: any[] = data.companies ?? data.accounts;
+    // `companies` is an object keyed by member ID.
+    const companies: Record<string, any> | undefined =
+      data && typeof data.companies === 'object' && !Array.isArray(data.companies)
+        ? data.companies
+        : undefined;
+    if (!companies) throw new PFError('UNKNOWN', false);
 
-    const accounts: MemberAccount[] = rawAccounts.map((acc) => {
-      const rawContribs: any[] = acc.passbook ?? acc.transactions ?? [];
-      const contributions: Contribution[] = rawContribs
-        .map((t) => ({
-          month: normalizeMonth(String(t.month ?? t.wage_month ?? '')),
-          employeeAmount: normalizeAmount(t.employee_share ?? t.employee),
-          employerAmount: normalizeAmount(t.employer_share ?? t.employer),
-          pensionAmount: normalizeAmount(t.pension_share ?? t.pension),
-        }))
-        .filter((c) => /^\d{4}-\d{2}$/.test(c.month))
-        .sort((a, b) => (a.month < b.month ? 1 : -1))
-        .slice(0, 12); // most recent first, cap 12
+    const accounts: MemberAccount[] = Object.entries(companies).map(
+      ([memberId, acc]) => {
+        const rawEntries: any[] = Array.isArray(acc?.passbook)
+          ? acc.passbook
+          : [];
 
-      const employeeShare = normalizeAmount(
-        acc.employee_share_total ?? acc.employee_balance
-      );
-      const employerShare = normalizeAmount(
-        acc.employer_share_total ?? acc.employer_balance
-      );
-      const pensionShare = normalizeAmount(
-        acc.pension_share_total ?? acc.pension_balance
-      );
+        // Every passbook row (uncapped) feeds the balance; the newest 12
+        // feed the contributions list.
+        const rows = rawEntries
+          .map((t) => ({
+            month:
+              t.year && t.month
+                ? `${t.year}-${String(t.month).padStart(2, '0')}`
+                : normalizeMonth(String(t.wage_month ?? t.month ?? '')),
+            employeeAmount: normalizeAmount(t.employee_share),
+            employerAmount: normalizeAmount(t.employer_share),
+            pensionAmount: normalizeAmount(t.pension_share),
+          }))
+          .filter((c) => /^\d{4}-\d{2}$/.test(c.month))
+          .sort((a, b) => (a.month < b.month ? 1 : -1));
 
-      return {
-        memberId: String(acc.member_id ?? acc.member_id_number ?? ''),
-        establishmentName: String(
-          acc.company_name ?? acc.establishment_name ?? 'Unknown employer'
-        ),
-        balance: {
-          employeeShare,
-          employerShare,
-          pensionShare,
-          total: employeeShare + employerShare + pensionShare,
-        },
-        contributions,
-        lastContributionMonth: contributions[0]?.month ?? '',
-        isActive: Boolean(acc.is_active ?? acc.active ?? true),
-      };
-    });
+        const sum = (f: (c: Contribution) => number) =>
+          rows.reduce((acc2, c) => acc2 + f(c), 0);
+        const employeeShare = sum((c) => c.employeeAmount);
+        const employerShare = sum((c) => c.employerAmount);
+        const pensionShare = sum((c) => c.pensionAmount);
+
+        const contributions = rows.slice(0, 12);
+        const lastContributionMonth = contributions[0]?.month ?? '';
+
+        // The payload carries no active flag; treat an account as active
+        // when its latest contribution is recent (EPFO passbooks lag ~2
+        // months behind payroll).
+        const cutoff = new Date();
+        cutoff.setMonth(cutoff.getMonth() - 4);
+        const cutoffMonth = `${cutoff.getFullYear()}-${String(
+          cutoff.getMonth() + 1
+        ).padStart(2, '0')}`;
+        const isActive = lastContributionMonth >= cutoffMonth;
+
+        return {
+          memberId: String(acc?.passbook?.[0]?.member_id ?? memberId),
+          establishmentName: String(acc?.company_name ?? 'Unknown employer'),
+          balance: {
+            employeeShare,
+            employerShare,
+            pensionShare,
+            total: employeeShare + employerShare + pensionShare,
+          },
+          contributions,
+          lastContributionMonth,
+          isActive,
+        };
+      }
+    );
+
+    if (accounts.length === 0) throw new PFError('UNKNOWN', false);
 
     return {
-      uan: String(data.uan ?? ''),
-      memberName: String(data.name ?? data.member_name ?? ''),
+      uan: String(data.pf_uan ?? data.uan ?? ''),
+      memberName: String(data.full_name ?? data.name ?? ''),
       accounts,
       fetchedAt: new Date().toISOString(),
       provider: this.name,
@@ -294,13 +378,29 @@ export class AggregatorProvider implements PFProvider {
 
   async healthCheck(): Promise<ProviderHealth> {
     const checkedAt = new Date().toISOString();
+    if (!process.env.PF_PROVIDER_BASE_URL || !process.env.PF_PROVIDER_API_KEY) {
+      return {
+        provider: this.name,
+        ok: false,
+        checkedAt,
+        detail: 'not configured (PF_PROVIDER_BASE_URL / PF_PROVIDER_API_KEY)',
+      };
+    }
+    // Surepass exposes no dedicated health endpoint; reachability of the
+    // API host is the best cheap signal (any HTTP response counts — a 404
+    // still proves the host is up; only network failure marks it down).
     try {
-      const res = await fetch(`${this.baseUrl}/health`, {
-        headers: { Authorization: `Bearer ${this.apiKey}` },
+      const res = await fetch(this.baseUrl, {
+        method: 'GET',
         signal: AbortSignal.timeout(5_000),
         cache: 'no-store',
       });
-      return { provider: this.name, ok: res.ok, checkedAt };
+      return {
+        provider: this.name,
+        ok: true,
+        checkedAt,
+        detail: `reachable (HTTP ${res.status})`,
+      };
     } catch {
       return {
         provider: this.name,
