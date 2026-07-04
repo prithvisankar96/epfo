@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { logConsent } from '@/lib/consent';
 import { getProvider } from '@/lib/providers';
-import { toPFError } from '@/lib/providers/errors';
+import { isPFError, toPFError } from '@/lib/providers/errors';
 import { checkRateLimit, clientIp } from '@/lib/ratelimit';
 import { createSession, updateSession } from '@/lib/session';
 import { initiateBodySchema } from '@/lib/validation';
@@ -69,9 +69,17 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const pfErr = toPFError(err);
-    // Metadata-only logging — never the UAN, mobile, or OTP.
+    // Metadata-only logging — never the UAN, mobile, or OTP. For errors
+    // that escaped the taxonomy (e.g. a failed consent-log write), include
+    // the error name/message so the cause is diagnosable.
     console.warn(
-      JSON.stringify({ at: 'api.initiate', errorCode: pfErr.code })
+      JSON.stringify({
+        at: 'api.initiate',
+        errorCode: pfErr.code,
+        ...(isPFError(err)
+          ? {}
+          : { cause: err instanceof Error ? `${err.name}: ${err.message}` : String(err) }),
+      })
     );
     return NextResponse.json(
       { error: { code: pfErr.code, retryable: pfErr.retryable } },

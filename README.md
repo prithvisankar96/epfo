@@ -77,10 +77,12 @@ amounts to integer INR and months to `YYYY-MM`, and logs only request metadata
   Before go-live, verify field names against the vendor's current sandbox —
   only `lib/providers/aggregator.ts` should need touching.
 * **Consent log: local JSONL file** (`data/consent-log.jsonl`), append-only.
-  Simplest for v1 — but Vercel's filesystem is ephemeral, so entries do not
-  survive redeploys there. For production, point `CONSENT_LOG_PATH` at a
-  mounted volume or replace the file append in `lib/consent.ts` with a hosted
-  append-only log (e.g. Axiom, S3). The DPDP consent record must be durable.
+  Simplest for v1. On Vercel the deployment filesystem is read-only, so the
+  default automatically falls back to `/tmp/pf-pulse-consent-log.jsonl` —
+  which works but does not survive redeploys or instance recycling. For
+  production, point `CONSENT_LOG_PATH` at a mounted volume or replace the
+  file append in `lib/consent.ts` with a hosted append-only log (e.g. Axiom,
+  S3). The DPDP consent record must be durable.
 * **No Redis.** Neither the mock nor the aggregator flow needs server-held
   state across OTP steps beyond the session store, so Redis was not added.
 * **"Download summary" skipped** — every client-side PNG/PDF option added a

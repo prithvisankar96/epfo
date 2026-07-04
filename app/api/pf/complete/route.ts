@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getProvider } from '@/lib/providers';
-import { toPFError } from '@/lib/providers/errors';
+import { isPFError, toPFError } from '@/lib/providers/errors';
 import {
   MAX_OTP_ATTEMPTS,
   destroySession,
@@ -64,8 +64,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ data });
   } catch (err) {
     const pfErr = toPFError(err);
+    // Metadata-only logging — the cause is included only for errors that
+    // escaped the taxonomy, and never contains UAN, mobile, or OTP.
     console.warn(
-      JSON.stringify({ at: 'api.complete', errorCode: pfErr.code })
+      JSON.stringify({
+        at: 'api.complete',
+        errorCode: pfErr.code,
+        ...(isPFError(err)
+          ? {}
+          : { cause: err instanceof Error ? `${err.name}: ${err.message}` : String(err) }),
+      })
     );
 
     if (pfErr.code === 'OTP_INVALID') {

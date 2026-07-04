@@ -24,10 +24,13 @@ export interface ConsentLogEntry {
 }
 
 function logPath(): string {
-  return (
-    process.env.CONSENT_LOG_PATH ??
-    path.join(process.cwd(), 'data', 'consent-log.jsonl')
-  );
+  if (process.env.CONSENT_LOG_PATH) return process.env.CONSENT_LOG_PATH;
+  // On Vercel the deployment filesystem is read-only — only /tmp is
+  // writable. That keeps the demo working, but /tmp does not survive
+  // redeploys or instance recycling: production must set CONSENT_LOG_PATH
+  // to a durable sink (see README).
+  if (process.env.VERCEL) return '/tmp/pf-pulse-consent-log.jsonl';
+  return path.join(process.cwd(), 'data', 'consent-log.jsonl');
 }
 
 export function hashUan(uan: string): string {
