@@ -18,12 +18,12 @@ export default function Stepper({ current }: { current: StepId }) {
             <span
               aria-current={state === 'current' ? 'step' : undefined}
               className={
-                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ' +
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ' +
                 (state === 'done'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-primary text-ink'
                   : state === 'current'
-                    ? 'border-2 border-brand-600 bg-white text-brand-700'
-                    : 'border border-neutral-300 bg-white text-neutral-400')
+                    ? 'bg-ink text-primary'
+                    : 'bg-canvas text-mute')
               }
             >
               {state === 'done' ? '✓' : i + 1}
@@ -32,17 +32,14 @@ export default function Stepper({ current }: { current: StepId }) {
               className={
                 'hidden text-sm sm:block ' +
                 (state === 'current'
-                  ? 'font-semibold text-neutral-900'
-                  : 'text-neutral-500')
+                  ? 'font-semibold text-ink'
+                  : 'text-bodytext')
               }
             >
               {step.label}
             </span>
             {i < STEPS.length - 1 && (
-              <span
-                aria-hidden
-                className="h-px flex-1 bg-neutral-200 sm:mx-1"
-              />
+              <span aria-hidden className="h-px flex-1 bg-mute/40 sm:mx-1" />
             )}
           </li>
         );

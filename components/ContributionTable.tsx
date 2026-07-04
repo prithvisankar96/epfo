@@ -19,7 +19,7 @@ export default function ContributionTable({
     : contributions.slice(0, COLLAPSED_ROWS);
 
   if (contributions.length === 0) {
-    return <p className="text-sm text-neutral-500">{s.noContributions}</p>;
+    return <p className="text-sm text-bodytext">{s.noContributions}</p>;
   }
 
   return (
@@ -27,30 +27,34 @@ export default function ContributionTable({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 text-left text-xs uppercase tracking-wide text-neutral-500">
-              <th className="py-2 pr-2 font-medium">{s.tableMonth}</th>
-              <th className="py-2 pr-2 text-right font-medium">
+            <tr className="bg-canvas-soft text-left text-xs uppercase tracking-wide text-bodytext">
+              <th className="whitespace-nowrap rounded-l-lg px-2 py-2 font-semibold">
+                {s.tableMonth}
+              </th>
+              <th className="whitespace-nowrap px-2 py-2 text-right font-semibold">
                 {s.tableEmployee}
               </th>
-              <th className="py-2 pr-2 text-right font-medium">
+              <th className="whitespace-nowrap px-2 py-2 text-right font-semibold">
                 {s.tableEmployer}
               </th>
-              <th className="py-2 text-right font-medium">{s.tablePension}</th>
+              <th className="rounded-r-lg whitespace-nowrap px-2 py-2 text-right font-semibold">
+                {s.tablePension}
+              </th>
             </tr>
           </thead>
           <tbody className="tabular-nums">
             {rows.map((c) => (
-              <tr key={c.month} className="border-b border-neutral-100">
-                <td className="py-2 pr-2 text-neutral-700">
+              <tr key={c.month} className="border-b border-canvas-soft">
+                <td className="whitespace-nowrap px-2 py-2.5 text-bodytext">
                   {formatMonth(c.month)}
                 </td>
-                <td className="py-2 pr-2 text-right text-neutral-900">
+                <td className="whitespace-nowrap px-2 py-2.5 text-right font-semibold text-ink">
                   {formatNumber(c.employeeAmount)}
                 </td>
-                <td className="py-2 pr-2 text-right text-neutral-900">
+                <td className="whitespace-nowrap px-2 py-2.5 text-right font-semibold text-ink">
                   {formatNumber(c.employerAmount)}
                 </td>
-                <td className="py-2 text-right text-neutral-900">
+                <td className="whitespace-nowrap px-2 py-2.5 text-right font-semibold text-ink">
                   {formatNumber(c.pensionAmount)}
                 </td>
               </tr>
@@ -63,7 +67,7 @@ export default function ContributionTable({
           type="button"
           onClick={() => setExpanded((e) => !e)}
           data-testid="table-toggle"
-          className="mt-3 text-sm font-medium text-brand-700 underline"
+          className="mt-3 rounded-full bg-canvas-soft px-4 py-1.5 text-sm font-semibold text-ink transition hover:bg-primary-pale"
         >
           {expanded ? s.showLess : s.showAll}
         </button>

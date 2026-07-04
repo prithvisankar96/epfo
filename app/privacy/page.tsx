@@ -10,16 +10,16 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <article className="prose-sm max-w-none space-y-6 text-neutral-700">
+    <article className="prose-sm max-w-none space-y-6 rounded-3xl bg-canvas p-6 text-bodytext sm:p-8">
       <header>
-        <h1 className="text-2xl font-bold text-neutral-900">Privacy policy</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <h1 className="text-3xl font-black tracking-tight text-ink">Privacy policy</h1>
+        <p className="mt-1 text-sm text-mute">
           Effective July 2026 · Consent text version {CONSENT_TEXT_VERSION}
         </p>
       </header>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-neutral-900">
+        <h2 className="text-lg font-semibold text-ink">
           The short version
         </h2>
         <p>
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-neutral-900">
+        <h2 className="text-lg font-semibold text-ink">
           What we collect, and why
         </h2>
         <ul className="list-disc space-y-2 pl-5">
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-neutral-900">
+        <h2 className="text-lg font-semibold text-ink">
           What we deliberately don&rsquo;t do
         </h2>
         <ul className="list-disc space-y-2 pl-5">
@@ -85,7 +85,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-neutral-900">
+        <h2 className="text-lg font-semibold text-ink">
           Who else is involved
         </h2>
         <p>
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-neutral-900">
+        <h2 className="text-lg font-semibold text-ink">
           Your choices
         </h2>
         <p>
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-neutral-900">Questions</h2>
+        <h2 className="text-lg font-semibold text-ink">Questions</h2>
         <p>
           If anything here is unclear, or you want a consent record deleted,
           contact us at privacy@pfpulse.in.

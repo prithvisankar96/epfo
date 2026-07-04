@@ -69,7 +69,7 @@ export default function OTPInput({
               refs.current[Math.min(pasted.length, 5)]?.focus();
             }
           }}
-          className="h-12 w-10 rounded-lg border border-neutral-300 text-center text-xl font-semibold focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-neutral-100 sm:h-14 sm:w-12"
+          className="h-12 w-10 rounded-xl border border-ink bg-canvas text-center text-xl font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-ink disabled:bg-canvas-soft sm:h-14 sm:w-12"
         />
       ))}
     </div>

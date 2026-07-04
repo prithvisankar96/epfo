@@ -11,7 +11,8 @@ export default function ConsentCheckbox({
   const s = en.consent;
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm leading-relaxed text-neutral-700">
+      {/* Soft-green feature surface for the consent copy */}
+      <div className="rounded-2xl bg-primary-pale p-4 text-sm leading-relaxed text-ink-deep">
         {s.body}
       </div>
       <label className="flex cursor-pointer items-start gap-3">
@@ -19,14 +20,14 @@ export default function ConsentCheckbox({
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="mt-0.5 h-5 w-5 rounded border-neutral-300 text-brand-600 accent-brand-600 focus:ring-brand-500"
+          className="mt-0.5 h-5 w-5 rounded border-ink accent-primary"
           data-testid="consent-checkbox"
         />
-        <span className="text-sm font-medium text-neutral-900">
+        <span className="text-sm font-semibold text-ink">
           {s.checkboxLabel}
         </span>
       </label>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-mute">
         <Link href="/privacy" target="_blank" className="underline">
           {s.privacyLinkText}
         </Link>

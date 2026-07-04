@@ -29,10 +29,10 @@ export default function SplitTiles({
       {tiles.map((tile) => (
         <div
           key={tile.label}
-          className="relative rounded-xl border border-neutral-200 bg-white p-3 sm:p-4"
+          className="relative rounded-2xl bg-canvas p-3 sm:p-5"
           data-testid={tile.testId}
         >
-          <div className="flex items-start gap-1 text-xs text-neutral-500 sm:text-sm">
+          <div className="flex items-start gap-1 text-xs text-bodytext sm:text-sm">
             <span>{tile.label}</span>
             {tile.tooltip && (
               <button
@@ -41,19 +41,19 @@ export default function SplitTiles({
                 aria-expanded={tooltipOpen}
                 onClick={() => setTooltipOpen((o) => !o)}
                 onBlur={() => setTooltipOpen(false)}
-                className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-[10px] font-bold text-neutral-500 hover:bg-neutral-100"
+                className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-canvas-soft text-[10px] font-bold text-bodytext hover:bg-primary-pale"
               >
                 ?
               </button>
             )}
           </div>
-          <p className="mt-1 text-base font-semibold text-neutral-900 sm:text-xl">
+          <p className="mt-1 text-base font-black tracking-tight text-ink sm:text-2xl">
             {formatINR(tile.value)}
           </p>
           {tile.tooltip && tooltipOpen && (
             <div
               role="tooltip"
-              className="absolute left-0 right-0 top-full z-10 mt-2 rounded-lg bg-neutral-900 p-3 text-xs leading-relaxed text-white shadow-lg sm:left-auto sm:w-64"
+              className="absolute left-0 right-0 top-full z-10 mt-2 rounded-xl bg-ink p-3 text-xs leading-relaxed text-canvas-soft sm:left-auto sm:w-64"
             >
               {tile.tooltip}
             </div>

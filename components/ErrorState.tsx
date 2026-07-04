@@ -29,22 +29,27 @@ export default function ErrorState({
   const copy = en.errors[code];
   return (
     <div
-      className="mx-auto max-w-md space-y-4 rounded-xl border border-neutral-200 bg-white p-6 text-center"
+      className="mx-auto max-w-md space-y-4 rounded-3xl bg-canvas p-6 text-center sm:p-8"
       data-testid={`error-${code}`}
       role="alert"
     >
-      <div aria-hidden className="text-4xl">
+      <div
+        aria-hidden
+        className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-canvas-soft text-3xl"
+      >
         {ICONS[code]}
       </div>
-      <h2 className="text-xl font-semibold text-neutral-900">{copy.title}</h2>
-      <p className="text-sm leading-relaxed text-neutral-600">{copy.body}</p>
+      <h2 className="text-2xl font-black tracking-tight text-ink">
+        {copy.title}
+      </h2>
+      <p className="text-sm leading-relaxed text-bodytext">{copy.body}</p>
       {'linkHref' in copy && copy.linkHref && (
         <p>
           <a
             href={copy.linkHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-brand-700 underline"
+            className="text-sm font-semibold text-ink underline"
           >
             {copy.linkText}
           </a>
@@ -53,7 +58,7 @@ export default function ErrorState({
       <button
         type="button"
         onClick={onAction}
-        className="w-full rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white transition hover:bg-brand-700"
+        className="w-full rounded-3xl bg-primary px-6 py-3 font-semibold text-ink transition hover:bg-primary-active"
         data-testid="error-action"
       >
         {copy.action}

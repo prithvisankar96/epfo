@@ -4,44 +4,52 @@ import { en } from '@/lib/strings';
 export default function LandingPage() {
   const s = en.landing;
   return (
-    <div className="space-y-10">
-      <section className="space-y-4 pt-4 text-center sm:pt-10">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
+    <div className="space-y-12">
+      {/* Hero band: display weight 900 on the sage canvas, lime CTA pill */}
+      <section className="space-y-6 pt-6 text-center sm:pt-12">
+        <h1 className="mx-auto max-w-2xl text-4xl font-black leading-[0.95] tracking-tight text-ink sm:text-6xl">
           {s.heroTitle}
         </h1>
-        <p className="mx-auto max-w-xl text-neutral-600">{s.heroSubtitle}</p>
+        <p className="mx-auto max-w-xl text-lg leading-relaxed text-bodytext">
+          {s.heroSubtitle}
+        </p>
         <Link
           href="/check"
-          className="inline-block rounded-xl bg-brand-600 px-8 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+          className="inline-block rounded-3xl bg-primary px-8 py-3.5 text-base font-semibold text-ink transition hover:bg-primary-active focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-canvas-soft"
         >
           {s.cta}
         </Link>
       </section>
 
+      {/* White content cards on the sage canvas — surface contrast is the elevation */}
       <section className="grid gap-4 sm:grid-cols-3">
         {s.trust.map((t) => (
-          <div
-            key={t.title}
-            className="rounded-xl border border-neutral-200 bg-white p-4"
-          >
-            <h2 className="mb-1 font-semibold text-neutral-900">{t.title}</h2>
-            <p className="text-sm text-neutral-600">{t.body}</p>
+          <div key={t.title} className="rounded-3xl bg-canvas p-6">
+            <h2 className="mb-2 text-base font-semibold tracking-tight text-ink">
+              {t.title}
+            </h2>
+            <p className="text-sm leading-relaxed text-bodytext">{t.body}</p>
           </div>
         ))}
       </section>
 
-      <section className="rounded-xl border border-brand-100 bg-brand-50 p-5">
-        <h2 className="mb-3 font-semibold text-brand-900">How it works</h2>
-        <ol className="space-y-2">
+      {/* Polarity-flipped dark feature card: ink surface, Wise-green text */}
+      <section className="rounded-3xl bg-ink p-6 sm:p-8">
+        <h2 className="mb-5 text-2xl font-black tracking-tight text-primary">
+          How it works
+        </h2>
+        <ol className="space-y-4">
           {s.howItWorks.map((step, i) => (
-            <li key={step} className="flex gap-3 text-sm text-brand-900">
+            <li key={step} className="flex items-start gap-4 text-canvas-soft">
               <span
                 aria-hidden
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-black text-ink"
               >
                 {i + 1}
               </span>
-              {step}
+              <span className="pt-0.5 text-sm leading-relaxed sm:text-base">
+                {step}
+              </span>
             </li>
           ))}
         </ol>

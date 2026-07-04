@@ -7,6 +7,9 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-neutral-50 text-neutral-900 antialiased;
+    /* Sage-tinted canvas is the brand's defining surface; white is
+       reserved for cards sitting on it. */
+    @apply bg-canvas-soft text-ink antialiased;
+    font-feature-settings: 'calt';
   }
 }

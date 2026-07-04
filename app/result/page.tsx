@@ -18,7 +18,7 @@ export default function ResultPage() {
     <div className="space-y-6">
       <Dashboard data={data} />
 
-      <p className="text-xs leading-relaxed text-neutral-500">
+      <p className="px-1 text-xs leading-relaxed text-mute">
         {en.dashboard.freshnessNote}
       </p>
 
@@ -26,7 +26,7 @@ export default function ResultPage() {
         <button
           type="submit"
           data-testid="check-another"
-          className="w-full rounded-xl border border-neutral-300 bg-white px-6 py-3 font-semibold text-neutral-700 transition hover:bg-neutral-100 sm:w-auto"
+          className="w-full rounded-3xl border border-ink bg-canvas px-6 py-3 font-semibold text-ink transition hover:bg-canvas-soft sm:w-auto"
         >
           {en.dashboard.checkAnother}
         </button>

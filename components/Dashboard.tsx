@@ -48,16 +48,16 @@ export default function Dashboard({ data }: { data: PFAccountData }) {
       <SplitTiles balance={account.balance} />
 
       {showChart && (
-        <section className="rounded-xl border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 font-semibold text-neutral-900">
+        <section className="rounded-3xl bg-canvas p-5 sm:p-6">
+          <h2 className="mb-4 text-xl font-black tracking-tight text-ink">
             {s.trendTitle}
           </h2>
           <ContributionChart contributions={account.contributions} />
         </section>
       )}
 
-      <section className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 font-semibold text-neutral-900">
+      <section className="rounded-3xl bg-canvas p-5 sm:p-6">
+        <h2 className="mb-4 text-xl font-black tracking-tight text-ink">
           {s.contributionsTitle}
         </h2>
         <ContributionTable contributions={account.contributions} />

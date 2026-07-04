@@ -52,6 +52,9 @@ async function postJson(
   }
 }
 
+const inputClass =
+  'w-full rounded-xl border border-ink bg-canvas px-4 py-3 text-lg tracking-wider text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-ink';
+
 export default function CheckPage() {
   const router = useRouter();
 
@@ -202,18 +205,18 @@ export default function CheckPage() {
         data-testid="loading-screen"
         aria-live="polite"
       >
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-brand-100 border-t-brand-600" />
-        <p className="font-medium text-neutral-700">
+        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-canvas border-t-ink" />
+        <p className="font-semibold text-ink">
           {en.loading.stages[loadingStage]}
         </p>
         <div className="space-y-3" aria-hidden>
-          <div className="h-24 animate-pulse rounded-xl bg-neutral-200" />
+          <div className="h-24 animate-pulse rounded-3xl bg-canvas/70" />
           <div className="grid grid-cols-3 gap-3">
-            <div className="h-16 animate-pulse rounded-xl bg-neutral-200" />
-            <div className="h-16 animate-pulse rounded-xl bg-neutral-200" />
-            <div className="h-16 animate-pulse rounded-xl bg-neutral-200" />
+            <div className="h-16 animate-pulse rounded-2xl bg-canvas/70" />
+            <div className="h-16 animate-pulse rounded-2xl bg-canvas/70" />
+            <div className="h-16 animate-pulse rounded-2xl bg-canvas/70" />
           </div>
-          <div className="h-32 animate-pulse rounded-xl bg-neutral-200" />
+          <div className="h-32 animate-pulse rounded-3xl bg-canvas/70" />
         </div>
       </div>
     );
@@ -223,158 +226,159 @@ export default function CheckPage() {
     <div className="mx-auto max-w-md">
       <Stepper current={phase} />
 
-      {phase === 'details' && (
-        <form onSubmit={submitDetails} className="space-y-5" noValidate>
-          <h1 className="text-xl font-semibold text-neutral-900">
-            {en.input.title}
-          </h1>
-          <div>
-            <label
-              htmlFor="uan"
-              className="mb-1 block text-sm font-medium text-neutral-700"
-            >
-              {en.input.uanLabel}
-            </label>
-            <input
-              id="uan"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={12}
-              value={uan}
-              onChange={(e) => setUan(e.target.value.replace(/\D/g, ''))}
-              placeholder={en.input.uanPlaceholder}
-              data-testid="uan-input"
-              className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-lg tracking-wider focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-            <p className="mt-1 text-xs text-neutral-500">
-              {en.input.uanHelper}
-            </p>
-            {fieldErrors.uan && (
-              <p className="mt-1 text-sm text-red-600" role="alert">
-                {fieldErrors.uan}
-              </p>
-            )}
-          </div>
-          <div>
-            <label
-              htmlFor="mobile"
-              className="mb-1 block text-sm font-medium text-neutral-700"
-            >
-              {en.input.mobileLabel}
-            </label>
-            <div className="flex items-stretch">
-              <span className="flex items-center rounded-l-lg border border-r-0 border-neutral-300 bg-neutral-100 px-3 text-neutral-600">
-                +91
-              </span>
-              <input
-                id="mobile"
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                maxLength={10}
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                placeholder={en.input.mobilePlaceholder}
-                data-testid="mobile-input"
-                className="w-full rounded-r-lg border border-neutral-300 px-4 py-3 text-lg tracking-wider focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
-            </div>
-            <p className="mt-1 text-xs text-neutral-500">
-              {en.input.mobileHelper}
-            </p>
-            {fieldErrors.mobile && (
-              <p className="mt-1 text-sm text-red-600" role="alert">
-                {fieldErrors.mobile}
-              </p>
-            )}
-          </div>
-          <button
-            type="submit"
-            data-testid="details-continue"
-            className="w-full rounded-xl bg-brand-600 px-6 py-3.5 font-semibold text-white transition hover:bg-brand-700"
-          >
-            {en.input.continue}
-          </button>
-        </form>
-      )}
-
-      {phase === 'consent' && (
-        <div className="space-y-5">
-          <h1 className="text-xl font-semibold text-neutral-900">
-            {en.consent.title}
-          </h1>
-          <ConsentCheckbox checked={consented} onChange={setConsented} />
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setPhase('details')}
-              className="rounded-xl border border-neutral-300 px-5 py-3 font-medium text-neutral-700 transition hover:bg-neutral-100"
-            >
-              {en.consent.back}
-            </button>
-            <button
-              type="button"
-              onClick={sendOtp}
-              disabled={!consented || submitting}
-              data-testid="send-otp"
-              className="flex-1 rounded-xl bg-brand-600 px-6 py-3 font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-neutral-300"
-            >
-              {submitting ? 'Sending…' : en.consent.sendOtp}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {phase === 'otp' && (
-        <div className="space-y-5">
-          <div className="text-center">
-            <h1 className="text-xl font-semibold text-neutral-900">
-              {en.otp.title}
+      <div className="rounded-3xl bg-canvas p-6">
+        {phase === 'details' && (
+          <form onSubmit={submitDetails} className="space-y-5" noValidate>
+            <h1 className="text-2xl font-black tracking-tight text-ink">
+              {en.input.title}
             </h1>
-            <p className="mt-1 text-sm text-neutral-600" data-testid="otp-sent-to">
-              {en.otp.sentTo(otpSentTo)}
-            </p>
-            <p className="text-xs text-neutral-500">{en.otp.helper}</p>
-          </div>
-          <OTPInput value={otp} onChange={setOtp} disabled={submitting} />
-          {otpMessage && (
-            <p
-              className="text-center text-sm text-red-600"
-              role="alert"
-              data-testid="otp-message"
+            <div>
+              <label
+                htmlFor="uan"
+                className="mb-1 block text-sm font-semibold text-ink"
+              >
+                {en.input.uanLabel}
+              </label>
+              <input
+                id="uan"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={12}
+                value={uan}
+                onChange={(e) => setUan(e.target.value.replace(/\D/g, ''))}
+                placeholder={en.input.uanPlaceholder}
+                data-testid="uan-input"
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-mute">{en.input.uanHelper}</p>
+              {fieldErrors.uan && (
+                <p className="mt-1 text-sm font-semibold text-negative" role="alert">
+                  {fieldErrors.uan}
+                </p>
+              )}
+            </div>
+            <div>
+              <label
+                htmlFor="mobile"
+                className="mb-1 block text-sm font-semibold text-ink"
+              >
+                {en.input.mobileLabel}
+              </label>
+              <div className="flex items-stretch">
+                <span className="flex items-center rounded-l-xl border border-r-0 border-ink bg-canvas-soft px-3 font-semibold text-ink">
+                  +91
+                </span>
+                <input
+                  id="mobile"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  maxLength={10}
+                  value={mobile}
+                  onChange={(e) =>
+                    setMobile(e.target.value.replace(/\D/g, ''))
+                  }
+                  placeholder={en.input.mobilePlaceholder}
+                  data-testid="mobile-input"
+                  className={`${inputClass} rounded-l-none`}
+                />
+              </div>
+              <p className="mt-1 text-xs text-mute">{en.input.mobileHelper}</p>
+              {fieldErrors.mobile && (
+                <p className="mt-1 text-sm font-semibold text-negative" role="alert">
+                  {fieldErrors.mobile}
+                </p>
+              )}
+            </div>
+            <button
+              type="submit"
+              data-testid="details-continue"
+              className="w-full rounded-3xl bg-primary px-6 py-3 font-semibold text-ink transition hover:bg-primary-active"
             >
-              {otpMessage}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={verifyOtp}
-            disabled={otp.length !== 6 || submitting}
-            data-testid="verify-otp"
-            className="w-full rounded-xl bg-brand-600 px-6 py-3.5 font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-neutral-300"
-          >
-            {en.otp.verify}
-          </button>
-          <p className="text-center text-sm">
-            {resendIn > 0 ? (
-              <span className="text-neutral-400">
-                {en.otp.resendIn(resendIn)}
-              </span>
-            ) : (
+              {en.input.continue}
+            </button>
+          </form>
+        )}
+
+        {phase === 'consent' && (
+          <div className="space-y-5">
+            <h1 className="text-2xl font-black tracking-tight text-ink">
+              {en.consent.title}
+            </h1>
+            <ConsentCheckbox checked={consented} onChange={setConsented} />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPhase('details')}
+                className="rounded-3xl bg-canvas-soft px-5 py-3 font-semibold text-ink transition hover:bg-canvas-soft/70"
+              >
+                {en.consent.back}
+              </button>
               <button
                 type="button"
                 onClick={sendOtp}
-                disabled={submitting}
-                data-testid="resend-otp"
-                className="font-medium text-brand-700 underline"
+                disabled={!consented || submitting}
+                data-testid="send-otp"
+                className="flex-1 rounded-3xl bg-primary px-6 py-3 font-semibold text-ink transition hover:bg-primary-active disabled:cursor-not-allowed disabled:bg-canvas-soft disabled:text-mute"
               >
-                {en.otp.resend}
+                {submitting ? 'Sending…' : en.consent.sendOtp}
               </button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'otp' && (
+          <div className="space-y-5">
+            <div className="text-center">
+              <h1 className="text-2xl font-black tracking-tight text-ink">
+                {en.otp.title}
+              </h1>
+              <p
+                className="mt-1 text-sm text-bodytext"
+                data-testid="otp-sent-to"
+              >
+                {en.otp.sentTo(otpSentTo)}
+              </p>
+              <p className="text-xs text-mute">{en.otp.helper}</p>
+            </div>
+            <OTPInput value={otp} onChange={setOtp} disabled={submitting} />
+            {otpMessage && (
+              <p
+                className="text-center text-sm font-semibold text-negative"
+                role="alert"
+                data-testid="otp-message"
+              >
+                {otpMessage}
+              </p>
             )}
-          </p>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={verifyOtp}
+              disabled={otp.length !== 6 || submitting}
+              data-testid="verify-otp"
+              className="w-full rounded-3xl bg-primary px-6 py-3 font-semibold text-ink transition hover:bg-primary-active disabled:cursor-not-allowed disabled:bg-canvas-soft disabled:text-mute"
+            >
+              {en.otp.verify}
+            </button>
+            <p className="text-center text-sm">
+              {resendIn > 0 ? (
+                <span className="text-mute">{en.otp.resendIn(resendIn)}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={sendOtp}
+                  disabled={submitting}
+                  data-testid="resend-otp"
+                  className="font-semibold text-ink underline"
+                >
+                  {en.otp.resend}
+                </button>
+              )}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

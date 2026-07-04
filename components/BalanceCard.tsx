@@ -2,6 +2,9 @@ import { formatINR, formatTimestamp, maskUan } from '@/lib/format';
 import type { MemberAccount } from '@/lib/providers/types';
 import { en } from '@/lib/strings';
 
+// The hero balance uses the brand's polarity-flipped dark card: ink
+// surface, Wise-green display type at weight 900 — the promotional moment.
+
 export default function BalanceCard({
   memberName,
   uan,
@@ -21,10 +24,10 @@ export default function BalanceCard({
   const account = accounts[selectedIndex];
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-brand-700 text-white shadow-md">
+    <section className="overflow-hidden rounded-3xl bg-ink text-canvas-soft">
       {accounts.length > 1 && (
         <div
-          className="flex overflow-x-auto border-b border-brand-600"
+          className="flex overflow-x-auto px-3 pt-3"
           role="tablist"
           aria-label="PF accounts"
         >
@@ -36,10 +39,10 @@ export default function BalanceCard({
               onClick={() => onSelect(i)}
               data-testid={`account-tab-${i}`}
               className={
-                'shrink-0 px-4 py-2.5 text-left text-xs font-medium transition ' +
+                'shrink-0 border-b-2 px-3 py-2.5 text-left text-xs font-semibold transition ' +
                 (i === selectedIndex
-                  ? 'bg-brand-600 text-white'
-                  : 'text-brand-100 hover:bg-brand-600/50')
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-canvas-soft/60 hover:text-canvas-soft')
               }
             >
               {acc.establishmentName}
@@ -47,28 +50,33 @@ export default function BalanceCard({
           ))}
         </div>
       )}
-      <div className="space-y-3 p-5 sm:p-6">
+      <div className="space-y-3 p-6 sm:p-8">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="text-sm text-brand-100">{s.totalBalance}</span>
+          <span className="text-sm text-canvas-soft/80">{s.totalBalance}</span>
           {!account.isActive && (
-            <span className="rounded-full bg-brand-900/60 px-2.5 py-0.5 text-xs text-brand-100">
+            <span className="rounded-full bg-canvas-soft/15 px-3 py-1 text-xs font-semibold text-canvas-soft">
               {s.inactiveBadge}
             </span>
           )}
         </div>
         <p
-          className="text-4xl font-bold tracking-tight sm:text-5xl"
+          className="text-5xl font-black leading-none tracking-tight text-primary sm:text-6xl"
           data-testid="total-balance"
         >
           {formatINR(account.balance.total)}
         </p>
-        <div className="space-y-0.5 text-sm text-brand-100">
-          <p data-testid="member-name">
-            {memberName} · <span className="font-mono">{maskUan(uan)}</span>
+        <div className="space-y-0.5 pt-1 text-sm">
+          <p data-testid="member-name" className="font-semibold text-canvas">
+            {memberName} ·{' '}
+            <span className="font-normal text-canvas-soft/80">
+              {maskUan(uan)}
+            </span>
           </p>
-          <p className="truncate">{account.establishmentName}</p>
+          <p className="truncate text-canvas-soft/80">
+            {account.establishmentName}
+          </p>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-1 border-t border-brand-600 pt-3 text-xs text-brand-100/80">
+        <div className="flex flex-wrap items-center justify-between gap-1 border-t border-canvas-soft/15 pt-4 text-xs text-canvas-soft/60">
           <span>{s.asOf(formatTimestamp(fetchedAt))}</span>
           <span>{s.disclaimer}</span>
         </div>
